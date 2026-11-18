@@ -1,0 +1,65 @@
+name: 编译微信通话 Hook dylib
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 编译 dylib (arm64, 自包含 hook)
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "SDK=$SDK"
+          clang -dynamiclib \
+            -arch arm64 \
+            -isysroot "$SDK" \
+            -miphoneos-version-min=15.0 \
+            -fobjc-arc \
+            -fno-objc-msgsend-selector-stubs \
+            -framework Foundation \
+            -framework CoreFoundation \
+            -install_name @rpath/WeChatCallHook.dylib \
+            -o WeChatCallHook.dylib \
+            WeChatCallHook.mm
+          echo "=== 编译产物 ==="
+          ls -lh WeChatCallHook.dylib
+          file WeChatCallHook.dylib
+
+      - name: ad-hoc 签名 dylib
+        run: |
+          codesign --force --sign - --timestamp=none WeChatCallHook.dylib
+          echo "=== 签名验证 ==="
+          codesign -dv WeChatCallHook.dylib 2>&1 | head -10
+
+      - name: 打包 deb (ellekit/trollfools 备用)
+        run: |
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/usr/lib/TrollRecorderHook
+          cp WeChatCallHook.dylib deb/usr/lib/TrollRecorderHook/
+          cat > deb/DEBIAN/control <<'EOF'
+          Package: com.wb.wechatcallhook
+          Name: WeChat Call Hook
+          Version: 1.0
+          Architecture: iphoneos-arm64
+          Depends: 
+          Maintainer: wb
+          Description: Hook WeChat call events, post Darwin notifications to CallRecorder app.
+          EOF
+          dpkg-deb -b deb WeChatCallHook.deb
+          ls -lh WeChatCallHook.deb
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: WeChatCallHook
+          path: |
+            WeChatCallHook.dylib
+            WeChatCallHook.deb
+          if-no-files-found: error
+          retention-days: 30
