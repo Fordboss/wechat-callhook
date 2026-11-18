@@ -26,7 +26,7 @@ jobs:
             -framework CoreFoundation \
             -install_name @rpath/WeChatCallHook.dylib \
             -o WeChatCallHook.dylib \
-            WeChatCallHook.mm
+            WeChatCallHook.m
           echo "=== 编译产物 ==="
           ls -lh WeChatCallHook.dylib
           file WeChatCallHook.dylib
