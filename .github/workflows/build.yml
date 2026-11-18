@@ -37,29 +37,10 @@ jobs:
           echo "=== 签名验证 ==="
           codesign -dv WeChatCallHook.dylib 2>&1 | head -10
 
-      - name: 打包 deb (ellekit/trollfools 备用)
-        run: |
-          mkdir -p deb/DEBIAN
-          mkdir -p deb/usr/lib/TrollRecorderHook
-          cp WeChatCallHook.dylib deb/usr/lib/TrollRecorderHook/
-          cat > deb/DEBIAN/control <<'EOF'
-          Package: com.wb.wechatcallhook
-          Name: WeChat Call Hook
-          Version: 1.0
-          Architecture: iphoneos-arm64
-          Depends: 
-          Maintainer: wb
-          Description: Hook WeChat call events, post Darwin notifications to CallRecorder app.
-          EOF
-          dpkg-deb -b deb WeChatCallHook.deb
-          ls -lh WeChatCallHook.deb
-
       - name: 上传产物
         uses: actions/upload-artifact@v4
         with:
           name: WeChatCallHook
-          path: |
-            WeChatCallHook.dylib
-            WeChatCallHook.deb
+          path: WeChatCallHook.dylib
           if-no-files-found: error
           retention-days: 30
